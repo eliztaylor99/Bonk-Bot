@@ -29,11 +29,12 @@ class MyClient(discord.Client):
                     print(user.avatar_url)                    
                     gif = Image.open('Media/TransparentBonkGif.gif')                                        
                     background = background.convert("RGBA")
-                    background = background.resize((513,513))
+                    imgSize = (256,256)
+                    background = background.resize(imgSize)
                     images = []
                     for frame in range(0, gif.n_frames):
                         gif.seek(frame)
-                        images.append(Image.alpha_composite(background, gif.convert("RGBA")))                        
+                        images.append(Image.alpha_composite(background, gif.resize(imgSize).convert("RGBA")))                        
                     
 
                     images[0].save('bonk.gif', save_all=True, append_images=images[1:], optimize=False, duration=100, loop=0)
