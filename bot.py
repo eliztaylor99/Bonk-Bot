@@ -35,9 +35,10 @@ class MyClient(discord.Client):
                     for frame in range(0, gif.n_frames):
                         gif.seek(frame)
                         images.append(Image.alpha_composite(background, gif.resize(imgSize).convert("RGBA")))                        
-                    
-
-                    images[0].save('bonk.gif', save_all=True, append_images=images[1:], optimize=False, duration=100, loop=0)
-                    await message.channel.send(file=discord.File('bonk.gif'))
+                        gif.seek(0)
+                    arr = io.BytesIO()
+                    images[0].save(arr, format='GIF', save_all=True, append_images=images[1:], duration=100, loop=0)
+                    arr.seek(0)
+                    await message.channel.send(file = discord.File(arr, 'bonk.gif'))
 client = MyClient()
 client.run(TOKEN)
