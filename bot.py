@@ -11,17 +11,47 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 
+async def scrapeboard(guild):
+    if guild.name == "Bloodlust and Lies":
+        usersDict = json.load(open("dictionary.txt"))
+        for channel in guild.channels:
+            validChannels = ["bonk-bot"]
+            if channel.name in validChannels:
+                print(channel.name)
+                messages = await channel.history(limit=2000).flatten()
+                for message in messages:
+                    if "!bonk" in message.content:
+                        for user in message.mentions:
+                            print(message.content)
+                            if str(user.id) in usersDict:
+                                usersDict[str(user.id)] = [usersDict[str(user.id)][0] + 1, user.display_name]
+                            else:
+                                usersDict[str(user.id)] = [1, user.display_name]
+        json.dump(usersDict, open("dictionary.txt", "w"))
+
 
 class MyClient(discord.Client):
     async def on_ready(self):
         print('Logged into:')
         for guild in self.guilds:
             print(guild.name)
+
+
     async def on_message(self, message):
         if self.user == message.author:
             return
+        if '!bonkboard' in message.content:
+            usersDict = json.load(open("dictionary.txt"))
+            allBonks = []
+            for item in usersDict.items():
+                allBonks.append(item[1])
 
-        if '!bonks' in message.content:
+            allBonks.sort(reverse=True)
+            embedVar = discord.Embed(title="Bonk Leaderboard", value="", color=0xff0000)
+            for x in range(0, 4):
+                embedVar.add_field(name="{0}".format(allBonks[x][1]), value="{0} bonks".format(allBonks[x][0]), inline=False)
+            await message.channel.send(embed=embedVar)
+        elif '!bonks' in message.content:
             for user in message.mentions:
                 usersDict = json.load(open("dictionary.txt"))
                 if str(user.id) in usersDict:
@@ -31,8 +61,10 @@ class MyClient(discord.Client):
                 else:
                     response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
+        return
 
-        elif '!bonk' in message.content:
+
+        if '!bonk' in message.content:
             for user in message.mentions:
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
