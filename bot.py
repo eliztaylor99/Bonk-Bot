@@ -61,10 +61,7 @@ class MyClient(discord.Client):
                 else:
                     response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
-        return
-
-
-        if '!bonk' in message.content:
+        elif '!bonk' in message.content:
             for user in message.mentions:
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
