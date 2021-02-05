@@ -26,7 +26,10 @@ class MyClient(discord.Client):
                 usersDict = json.load(open("dictionary.txt"))
                 if str(user.id) in usersDict:
                     numBonks = usersDict[str(user.id)]
-                    response = "{0} has been bonked {1} times".format(user.name, numBonks)
+                    response = "{0} has been bonked {1} times".format(user.display_name, numBonks)
+                    await message.channel.send(response)
+                else:
+                    response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
 
         elif '!bonk' in message.content:
