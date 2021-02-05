@@ -86,9 +86,9 @@ class MyClient(discord.Client):
                     usersDict = json.load(open("dictionary.txt"))
 
                     if str(user.id) in usersDict:
-                        usersDict[str(user.id)] = usersDict[str(user.id)] + 1
+                        usersDict[str(user.id)] = [usersDict[str(user.id)][0] + 1, user.display_name]
                     else:
-                        usersDict[str(user.id)] = 1
+                        usersDict[str(user.id)] = [1, user.display_name]
                     json.dump(usersDict, open("dictionary.txt", "w"))
 
 
