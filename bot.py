@@ -88,11 +88,24 @@ class MyClient(discord.Client):
                     if str(user.id) in usersDict:
                         usersDict[str(user.id)] = [usersDict[str(user.id)][0] + 1, user.display_name]
                     else:
-                        usersDict[str(user.id)] = [1, user.display_name]
+                        usersDict[str(user.id)] = [1, user.display_name]                                        
                     json.dump(usersDict, open("dictionary.txt", "w"))
+
+                    allBonks = 0
+                    for item in usersDict.items():
+                        allBonks += item[1][0]
+
+                    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="to {0} bonks".format(allBonks)))
         if message.author.id == 241702743834624000:            
             await message.add_reaction("🇭")
-
+        if message.author.id == 523949187663134754:
+            if '!clear' in message.content:
+                for user in message.mentions:
+                    usersDict = json.load(open("dictionary.txt"))
+                    if str(user.id) in usersDict:
+                        usersDict[str(user.id)] = (0, user.id)
+                        await message.channel.send("Cleared {0}".format(user.display_name))                                                                                  
+                    json.dump(usersDict, open("dictionary.txt", "w"))
 
 
 client = MyClient()
