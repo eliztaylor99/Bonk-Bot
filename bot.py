@@ -90,6 +90,8 @@ class MyClient(discord.Client):
                     else:
                         usersDict[str(user.id)] = [1, user.display_name]
                     json.dump(usersDict, open("dictionary.txt", "w"))
+        if message.author.id == 241702743834624000:            
+            await message.add_reaction("🇭")
 
 
 
