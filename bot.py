@@ -62,7 +62,10 @@ class MyClient(discord.Client):
                     response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
         elif '!bonk' in message.content:
-            for user in message.mentions:
+            members = message.mentions;
+            if '@everyone' in message.content:                                
+                members = await message.guild.fetch_members(limit=None).flatten()            
+            for user in members:
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
                     background = Image.open(io.BytesIO(r.content)) # Download the profile picture directly to memory                    
@@ -107,6 +110,7 @@ class MyClient(discord.Client):
                         await message.channel.send("Cleared {0}".format(user.display_name))                                                                                  
                     json.dump(usersDict, open("dictionary.txt", "w"))
 
-
-client = MyClient()
+intents = discord.Intents.default()
+intents.members = True
+client = MyClient(intents=intents)
 client.run(TOKEN)
