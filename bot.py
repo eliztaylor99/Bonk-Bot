@@ -95,10 +95,10 @@ class MyClient(discord.Client):
                     for item in usersDict.items():
                         allBonks += item[1][0]
 
-                    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="to {0} bonks".format(allBonks)))
+                    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="{0} bonks".format(allBonks)))
         if message.author.id == 241702743834624000:            
             await message.add_reaction("🇭")
-        if message.author.id == 523949187663134754 or message.author.id == 179037422389166080:
+        if message.author.id == 523949187663134754:
             if '!clear' in message.content:
                 for user in message.mentions:
                     usersDict = json.load(open("dictionary.txt"))
