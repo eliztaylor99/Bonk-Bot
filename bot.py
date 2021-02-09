@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-
 async def scrapeboard(guild):
     if guild.name == "Bloodlust and Lies":
         usersDict = json.load(open("dictionary.txt"))
@@ -30,7 +29,8 @@ async def scrapeboard(guild):
         json.dump(usersDict, open("dictionary.txt", "w"))
 
 
-class MyClient(discord.Client):
+class MyClient(discord.Client):   
+    canGlobalBonk = True 
     async def on_ready(self):
         print('Logged into:')
         for guild in self.guilds:
@@ -63,7 +63,7 @@ class MyClient(discord.Client):
                     await message.channel.send(response)
         elif '!bonk' in message.content:
             members = message.mentions;
-            if '@everyone' in message.content:                                
+            if '@everyone' in message.content and self.canGlobalBonk:                                
                 members = await message.guild.fetch_members(limit=None).flatten()            
             for user in members:
                 r = requests.get(user.avatar_url, stream=True)
@@ -109,6 +109,14 @@ class MyClient(discord.Client):
                         usersDict[str(user.id)] = (0, user.id)
                         await message.channel.send("Cleared {0}".format(user.display_name))                                                                                  
                     json.dump(usersDict, open("dictionary.txt", "w"))
+        authorized = [523949187663134754, 179037422389166080, 262238367079464960, 137766512248225792]
+        if message.author.id in authorized:
+            if '!toggleGlobalBonk' in message.content:
+                self.canGlobalBonk = not(self.canGlobalBonk)
+                if self.canGlobalBonk:
+                    await message.channel.send("Enabled Global Bonk")
+                else:
+                    await message.channel.send("Disabled Global Bonk")
 
 intents = discord.Intents.default()
 intents.members = True
