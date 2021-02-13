@@ -16,3 +16,5 @@ nohup python3 bot.py
 
 Long:
 See: https://realpython.com/how-to-make-a-discord-bot-python/
+
+Also check notes for process script
