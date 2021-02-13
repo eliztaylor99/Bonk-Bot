@@ -1,4 +1,5 @@
 # bot.py
+# Code by Rhys Sullivan & Stack Overflow
 import os
 import io
 import requests
