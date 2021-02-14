@@ -64,7 +64,7 @@ class MyClient(discord.Client):
                     await message.channel.send(response)
         elif '!bonk' in message.content:
             members = message.mentions;
-            if ('@everyone' in message.content) and self.canGlobalBonk:                                
+            if ('@everyone' in message.content) or ('@global-bonk' in message.content) and self.canGlobalBonk:                                
                 members = await message.guild.fetch_members(limit=None).flatten()            
             for user in members:
                 r = requests.get(user.avatar_url, stream=True)
