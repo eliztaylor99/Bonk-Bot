@@ -14,7 +14,7 @@ while True:
         subprocess.Popen([sys.executable, 'bot.py'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     else:
         print('Up to date')
-    time.sleep(10)
+    time.sleep(60)
 
 
 
