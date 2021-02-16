@@ -42,7 +42,7 @@ class MyClient(discord.Client):
         if self.user == message.author:
             return
         if 'version' in message.content:
-            await message.channel.send("0.2.4")
+            await message.channel.send("0.2.5")
         if '!bonkboard' in message.content:
             usersDict = json.load(open("dictionary.txt"))
             allBonks = []
@@ -86,6 +86,7 @@ class MyClient(discord.Client):
                         images.append(Image.alpha_composite(background, gif.resize(imgSize).convert("RGBA")))                        
                         gif.seek(0)
                     arr = io.BytesIO()
+                    images[0].info.pop('background', None)
                     images[0].save(arr, format='GIF', save_all=True, append_images=images[1:], duration=100, loop=0)
                     arr.seek(0)
                     await message.channel.send(file = discord.File(arr, 'bonk.gif'))
