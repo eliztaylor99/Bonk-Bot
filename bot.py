@@ -42,7 +42,7 @@ class MyClient(discord.Client):
         if self.user == message.author:
             return
         if 'version' in message.content:
-            await message.channel.send("0.2.1")
+            await message.channel.send("0.2.2")
         if '!bonkboard' in message.content:
             usersDict = json.load(open("dictionary.txt"))
             allBonks = []
@@ -72,7 +72,7 @@ class MyClient(discord.Client):
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
                     background = Image.open(io.BytesIO(r.content)) # Download the profile picture directly to memory                    
-                    background = background.convert("P", pallete=Image.ADAPTIVE, colors=8)
+                    #background = background.convert("P", pallete=Image.ADAPTIVE, colors=8)
                     #background.save(os.path.join('profile.png'), quality=85) # CODE TO SAVE THE FILE
                     print(user.id)
                     print(user.avatar_url)                    
