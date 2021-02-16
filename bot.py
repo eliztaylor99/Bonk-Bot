@@ -42,7 +42,7 @@ class MyClient(discord.Client):
         if self.user == message.author:
             return
         if 'version' in message.content:
-            await message.channel.send("0.2.2")
+            await message.channel.send("0.2.3")
         if '!bonkboard' in message.content:
             usersDict = json.load(open("dictionary.txt"))
             allBonks = []
