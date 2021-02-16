@@ -72,7 +72,7 @@ class MyClient(discord.Client):
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
                     background = Image.open(io.BytesIO(r.content)) # Download the profile picture directly to memory                    
-                    #background = background.convert("P", pallete=Image.ADAPTIVE, colors=8)
+                    background = background.convert("P", palette=Image.ADAPTIVE, colors=8)
                     #background.save(os.path.join('profile.png'), quality=85) # CODE TO SAVE THE FILE
                     print(user.id)
                     print(user.avatar_url)                    
