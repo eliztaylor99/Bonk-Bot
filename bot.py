@@ -57,6 +57,8 @@ class MyClient(discord.Client):
     async def on_message(self, message):
         if self.user == message.author:
             return
+        if 'version' in message.content:
+            await message.channel.send("0.2.5")
         if '!bonkboard' in message.content:
             usersDict = json.load(open("dictionary.txt"))
             allBonks = []
@@ -78,7 +80,7 @@ class MyClient(discord.Client):
                 else:
                     response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
-        elif '!bonk' in message.content:
+        elif '!bonk' in message.content:            
             members = message.mentions
             if ('@everyone' in message.content) or ('@global-bonk' in message.content) and self.canGlobalBonk:                                
                 members = await message.guild.fetch_members(limit=None).flatten()            
@@ -86,9 +88,10 @@ class MyClient(discord.Client):
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
                     background = Image.open(io.BytesIO(r.content)) # Download the proflile picture directly to memory                    
+                    background = background.convert("P", palette=Image.ADAPTIVE, colors=256)
                     #background.save(os.path.join('profile.png'), quality=85) # CODE TO SAVE THE FILE
                     print(user.id)
-                    print(user.avatar_url)                    
+                    print(user.avatar_url)                                        
                     gif = Image.open('Media/TransparentBonkGif.gif')
                     background = background.convert("RGBA")
                     imgSize = (256,256)
@@ -99,6 +102,7 @@ class MyClient(discord.Client):
                         images.append(Image.alpha_composite(background, gif.resize(imgSize).convert("RGBA")))                        
                         gif.seek(0)
                     arr = io.BytesIO()
+                    images[0].info.pop('background', None)
                     images[0].save(arr, format='GIF', save_all=True, append_images=images[1:], duration=100, loop=0)
                     arr.seek(0)
                     await message.channel.send(file = discord.File(arr, 'bonk.gif'))
