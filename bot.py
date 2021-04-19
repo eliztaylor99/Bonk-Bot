@@ -142,7 +142,7 @@ class MyClient(discord.Client):
             # Add Text
             for line in lines:
                 draw = ImageDraw.Draw(background)         
-                colorblind_font = findMatchingFontSettings(line, font_name='arialbd.ttf', max_size=font_size, canvas=background)
+                colorblind_font = findMatchingFontSettings(line, font_name='DejaVuSans-Bold.ttf', max_size=font_size, canvas=background)
                 textwidth, textheight = draw.textsize(line, font=colorblind_font)
                 if offset == 0:
                     offset = textheight
