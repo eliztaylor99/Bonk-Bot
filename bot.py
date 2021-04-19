@@ -5,11 +5,27 @@ import io
 import requests
 import discord
 import json
-from PIL import Image
+import random
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 from dotenv import load_dotenv
+import textwrap
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+
+def findMatchingFontSettings(text, canvas, max_size=50, img_fraction=0.90, font_name="arial.ttf", ):
+    fontsize = max_size  # starting font size    
+    font = ImageFont.truetype(font_name, fontsize)
+    while font.getsize(text)[0] > img_fraction*canvas.size[0]:
+        # iterate until the text size is just larger than the criteria
+        fontsize -= 1
+        font = ImageFont.truetype(font_name, fontsize)
+
+    # optionally de-increment to be sure it is less than criteria
+    fontsize -= 1
+    if fontsize > max_size:
+        fontsize = max_size
+    return ImageFont.truetype(font_name, fontsize)
 
 async def scrapeboard(guild):
     if guild.name == "Bloodlust and Lies":
@@ -63,17 +79,17 @@ class MyClient(discord.Client):
                     response = "{0} has not been bonked yet".format(user.display_name)
                     await message.channel.send(response)
         elif '!bonk' in message.content:
-            members = message.mentions;
+            members = message.mentions
             if ('@everyone' in message.content) or ('@global-bonk' in message.content) and self.canGlobalBonk:                                
                 members = await message.guild.fetch_members(limit=None).flatten()            
             for user in members:
                 r = requests.get(user.avatar_url, stream=True)
                 if r.status_code == 200:
-                    background = Image.open(io.BytesIO(r.content)) # Download the profile picture directly to memory                    
+                    background = Image.open(io.BytesIO(r.content)) # Download the proflile picture directly to memory                    
                     #background.save(os.path.join('profile.png'), quality=85) # CODE TO SAVE THE FILE
                     print(user.id)
                     print(user.avatar_url)                    
-                    gif = Image.open('Media/TransparentBonkGif.gif')                                        
+                    gif = Image.open('Media/TransparentBonkGif.gif')
                     background = background.convert("RGBA")
                     imgSize = (256,256)
                     background = background.resize(imgSize)
@@ -100,6 +116,49 @@ class MyClient(discord.Client):
                         allBonks += item[1][0]
 
                     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="{0} bonks".format(allBonks)))
+        elif '!colorblind' in message.content:
+            await message.delete()
+            # Setup
+            colorblind_message = message.content[message.content.index('!colorblind')+len('!colorblind')+1:]            
+            colorblind_message = colorblind_message.replace('|','')
+            background = Image.open('Media/colorblind_background.png')
+            background = background.convert("RGBA")               
+            x_margin = random.randint(20,40)
+            y_margin = random.randint(20,50)
+            lines = textwrap.wrap(colorblind_message, 12)
+            offset = 0
+            font_size = random.randint(40,50)
+            rotation_amount = random.randint(-30, 30)
+            if abs(rotation_amount) > 10:
+                font_size = random.randint(20,25)
+                font_size = 25
+                offset = 30
+            if len(lines) < 4:                
+                offset = random.randint(60,80)
+            # Add Text
+            for line in lines:
+                draw = ImageDraw.Draw(background)         
+                colorblind_font = findMatchingFontSettings(line, font_name='arialbd.ttf', max_size=font_size, canvas=background)
+                textwidth, textheight = draw.textsize(line, font=colorblind_font)
+                if offset == 0:
+                    offset = textheight
+                x = 300-textwidth-x_margin
+                y = textheight+offset
+                draw.text((x, y), line, font=colorblind_font, fill="#69FC4B")
+                offset += textheight
+
+            # Apply post process            
+            background = background.rotate(rotation_amount)
+            new_background = Image.open('Media/colorblind_background.png')
+            background = Image.alpha_composite(new_background.convert("RGBA"), background)                    
+            background = background.convert("RGB")
+            background = background.filter(ImageFilter.BLUR)                        
+
+            # Send to discord
+            arr = io.BytesIO()
+            background.save(arr, format='png', save_all=True)
+            arr.seek(0)
+            await message.channel.send(file = discord.File(arr, 'colorblind.png'))
         if message.author.id == 241702743834624000:            
             await message.add_reaction("🇭")
         if message.author.id == 523949187663134754:
