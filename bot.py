@@ -2,6 +2,7 @@
 # Code by Rhys Sullivan & Stack Overflow
 import os
 import io
+from discord import message
 import requests
 import discord
 import json
@@ -9,9 +10,19 @@ import random
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 from dotenv import load_dotenv
 import textwrap
+from asyncio import sleep
+import tinder_api
+from threading import Timer
+import asyncio
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+LIKES_STATS_CHANNEL_ID = 853125126555828246
+PASSES_STATS_CHANNNEL_ID = 853125242519420929
+RHYS_PROFILE_ID = 523949187663134754
+CANIDATE_CHANNEL = 853106128471588874
+MAID_GANG_ID = 588906458368704512
+RHYS_TINDER_PROFILE_ID = "60c2db8cd821c401008981df"
 
 def findMatchingFontSettings(text, canvas, max_size=50, img_fraction=0.90, font_name="arial.ttf", ):
     fontsize = max_size  # starting font size    
@@ -45,18 +56,296 @@ async def scrapeboard(guild):
                                 usersDict[str(user.id)] = [1, user.display_name]
         json.dump(usersDict, open("dictionary.txt", "w"))
 
+async def sendPicture(image, ctx, compressed=True):
+    with io.BytesIO() as image_binary:
+        if compressed:
+            image.save(image_binary, "JPEG", optimize = True, quality = 10)
+            image_binary.seek(0)
+            return await ctx.send(file=discord.File(fp=image_binary, filename='image.jpeg'))
+        else:
+            image.save(image_binary, 'PNG')
+            image_binary.seek(0)
+            return await ctx.send(file=discord.File(fp=image_binary, filename='image.png'))
 
 class MyClient(discord.Client):   
     canGlobalBonk = True 
+    likes = 0
+    passes = 0
+    matches = 0
+    maid_gang = None
+
     async def on_ready(self):
         print('Logged into:')
         for guild in self.guilds:
-            print(guild.name)
+            if(guild.id == MAID_GANG_ID):
+                self.maid_gang = guild
+        #await self.updateTinderStats()
+        await self.updateTinderMessages()
+        #await self.send_canidate_message()
+    
+    def writeStat(self, key, value):
+        statsDict = json.load(open("stats.json"))
+        statsDict[key] = value
+        json.dump(statsDict, open("stats.json", "w"))
+
+    def getStat(self, key):
+        statsDict = json.load(open("stats.json"))
+        return statsDict[key] 
+    
+    async def updateTinderStats(self):        
+        likes_stats_channel = self.get_channel(LIKES_STATS_CHANNEL_ID)
+        passes_stats_channel = self.get_channel(PASSES_STATS_CHANNNEL_ID)
+        await likes_stats_channel.edit(name="{0}-likes".format(self.getStat("likes")))
+        await passes_stats_channel.edit(name="{0}-passes".format(self.getStat("passes")))
+    
+    def generateEmbedFromJSON(self, entry):
+        woman_data = entry["user"]
+        name = woman_data["name"]
+        try:
+            bio = woman_data["bio"]
+        except:
+            bio = "None"
+        try:
+            school = woman_data["schools"][0]["name"]
+        except:
+            school = "None"
+        try:
+            interest_array = woman_data["experiment_info"]["user_interests"]["selected_interests"]
+            interests = ""
+            for x in interest_array:
+                interests += x["name"] + " "
+        except:
+            interests = "None"                    
+        embed=discord.Embed(title=name, description=bio)
+        embed.add_field(name="Interests", value=interests, inline=False)
+        embed.add_field(name="School", value=school, inline=True)
+        return embed
 
 
-    async def on_message(self, message):
+    async def send_canidate_message(self):
+        # PREP DATA
+        #await self.updateTinderStats()
+        jsonData = tinder_api.get_suggestions()
+        if jsonData["meta"]["status"] != 200:
+            print("error")
+            return
+        
+        peopleQueue = jsonData["data"]["results"]
+
+        for entry in peopleQueue:
+            if entry["type"] != "user":
+                continue
+            cooldownComplete = False
+            woman_data = entry["user"]
+            name = woman_data["name"]
+            s_number = entry["s_number"]
+            id = woman_data["_id"]
+            profile_photos = []
+            profile_photo_index = 0
+            for photo in woman_data["photos"]:
+                r = requests.get(photo["url"], stream=True)
+                if r.status_code == 200:
+                    photo = Image.open(io.BytesIO(r.content)) # Download the proflile picture directly to memory                    
+                    profile_photos.append(photo)
+            try:
+                bio = woman_data["bio"]
+            except:
+                bio = "None"
+            try:
+                school = woman_data["schools"][0]["name"]
+            except:
+                school = "None"
+            try:
+                interest_array = woman_data["experiment_info"]["user_interests"]["selected_interests"]
+                interests = ""
+                for x in interest_array:
+                    interests += x["name"] + " "
+            except:
+                interests = "None"
+            canidate_channel = self.get_channel(CANIDATE_CHANNEL)
+            
+            embed=discord.Embed(title=name, description=bio)
+            embed.add_field(name="Interests", value=interests, inline=False)
+            embed.add_field(name="School", value=school, inline=True)
+            embed_msg = await canidate_channel.send(embed=embed)
+            
+            async def sendGif():
+                size = 600, 600
+                
+                def thumbnails(frames):
+                    resized = []
+                    for frame in frames:
+                        thumbnail = frame.copy()
+                        thumbnail.thumbnail(size, Image.BICUBIC)
+                        resized.append(thumbnail)
+                    return resized
+                
+                frames = thumbnails(profile_photos)
+
+                # Save output            
+                arr = io.BytesIO()
+                (list(frames)[0]).save(arr, format='GIF', save_all=True, append_images=list(frames), duration=500, loop=0)
+                arr.seek(0)
+                return await canidate_channel.send(file = discord.File(arr, 'bonk.gif'))
+            
+            async def addPicControls(msg):
+                await msg.add_reaction('⬅️')
+                await msg.add_reaction('➡️')
+                if cooldownComplete:
+                    await msg.add_reaction('❌')
+                    await msg.add_reaction('✅')
+            
+            async def endCooldown(msg):
+                cooldownComplete = True
+                addPicControls(msg)
+            
+
+            #msg = await sendGif()
+            msg = await sendPicture(profile_photos[profile_photo_index], canidate_channel)
+            await addPicControls(msg)
+            
+            voted = False
+            cooldown = 0
+            while not(voted):
+                cooldown += .2
+                if cooldown > 5:
+                    if not(cooldownComplete):
+                        cooldownComplete = True
+                        await addPicControls(msg)
+
+                reactions = discord.utils.get(self.cached_messages, id=msg.id).reactions
+                for reaction in reactions:
+                    if reaction.count < 2:
+                        continue
+                    emoji = str(reaction)
+                    if emoji == '✅':                        
+                        voted = True
+                        self.writeStat("likes", self.getStat("likes")+1)
+                        tinder_api.like_person(s_number, id)
+                    elif emoji == '❌':                        
+                        voted = True     
+                        self.writeStat("passes", self.getStat("passes")+1)
+                        tinder_api.pass_person(s_number, id)                            
+                    elif emoji == '⬅️':                        
+                        await msg.delete()
+                        if not(voted):
+                            profile_photo_index = (profile_photo_index - 1) % len(profile_photos)
+                            msg = await sendPicture(profile_photos[profile_photo_index], canidate_channel)
+                            await addPicControls(msg)
+                    elif emoji == '➡️':
+                        await msg.delete()
+                        if not(voted):
+                            profile_photo_index = (profile_photo_index + 1) % len(profile_photos)
+                            msg = await sendPicture(profile_photos[profile_photo_index], canidate_channel)
+                            await addPicControls(msg)
+                await sleep(.2)        
+            #await msg.delete()
+            #await embed_msg.delete()
+        
+        await self.send_canidate_message()
+
+    async def updateTinderMessages(self):
+        match_data = tinder_api.getMatches()
+        if match_data["meta"]["status"] != 200:
+            print("error getting matches")
+            return
+        matches = match_data["data"]["matches"]
+
+
+        for match in matches:
+            try:
+                json_data = tinder_api.getMessages(match["_id"])
+            except:
+                continue
+            if json_data["meta"]["status"] != 200:
+                print("error reading messages")
+                return
+            tinder_channel = self.get_channel(CANIDATE_CHANNEL)
+            messageQueue = json_data["data"]["messages"]
+            profile_data = {}        
+            channel_messages = {}
+            private_conversations = ["60c2db8cd821c401008981df60c435fcb92eb1010041e3dd"]        
+            for tinder_message in reversed(messageQueue):
+                sender = tinder_message["from"]    
+                receiver = tinder_message["to"]        
+                channel_name = tinder_message["match_id"]
+
+                if channel_name in private_conversations:
+                    continue
+
+                message_channel  = discord.utils.get(self.maid_gang.channels, name=channel_name)
+                if message_channel == None:
+                    message_channel = await self.maid_gang.create_text_channel(channel_name, category=tinder_channel.category)
+                
+                madeNewChannel = False
+                if not(channel_name in channel_messages):
+                    madeNewChannel=True
+                    channel_messages[channel_name] = await message_channel.history(limit=200).flatten()
+                
+                messages = channel_messages[channel_name]
+                content = tinder_message["message"]
+                already_sent = False
+                for bubble in messages:
+                    for embeded_content in bubble.embeds:
+                        if content in embeded_content.description or embeded_content.description in content:
+                            already_sent = True
+                if already_sent:
+                    continue
+                girl_name = ""
+                girl_url  = ""
+                girl_bio  = ""
+                girl_url  = ""
+                if not(sender in profile_data):            
+                    jsonData = tinder_api.getProfileFromID(sender)
+                    if jsonData["status"] != 200:
+                        print("error reading profile")
+                        return
+                    profileJSON = jsonData["results"]
+                    girl_name = profileJSON["name"]
+                    girl_url = profileJSON["photos"][0]["url"]
+                    girl_bio = profileJSON["bio"]
+                    profile_dict = {"name": girl_name, "url": girl_url}
+                    profile_data[sender] = profile_dict
+                
+                name = profile_data[sender]["name"]
+                url = profile_data[sender]["url"]
+                
+                if madeNewChannel:
+                    if sender == RHYS_TINDER_PROFILE_ID:
+                        girlJSON = tinder_api.getProfileFromID(receiver)                        
+                        girlJSON = girlJSON["results"]
+                        girl_name = girlJSON["name"]
+                        girl_url = girlJSON["photos"][0]["url"]
+                        girl_bio = girlJSON["bio"]
+                    
+                    embed =discord.Embed(title=girl_name, description=girl_bio)                                                            
+                    embed_msg = await message_channel.send(embed=embed)
+                    r = requests.get(girl_url, stream=True)
+                    if r.status_code == 200:
+                        photo = Image.open(io.BytesIO(r.content)) # Download the proflile picture directly to memory                                            
+                        msg = await sendPicture(photo, message_channel)
+
+
+                embed=discord.Embed(title=name, description=content)
+                embed.set_thumbnail(url=url)
+                await message_channel.send(embed=embed)        
+        print("Up to date on messages")
+        await asyncio.sleep(random.randint(60,300))    
+        await self.updateTinderMessages()
+
+    async def on_message(self, message):        
         if self.user == message.author:
             return
+        if not message.guild:            
+            img_url = message.content
+            img_url_start = img_url.index("http")
+            img_url_end = img_url.index("colorblind.png") + len("colorblind.png")
+            img_url = img_url[img_url_start:img_url_end]
+            r = requests.get(img_url, stream=True)
+            background = Image.open(io.BytesIO(r.content)) # Download the proflile picture directly to memory                    
+            background = background.convert("P", palette=Image.ADAPTIVE, colors=256)
+            background.show()
+            await message.channel.send('this is a dm')
         if 'version' in message.content:
             await message.channel.send("0.2.5")
         if '!bonkboard' in message.content:
@@ -163,6 +452,8 @@ class MyClient(discord.Client):
             background.save(arr, format='png', save_all=True)
             arr.seek(0)
             await message.channel.send(file = discord.File(arr, 'colorblind.png'))
+        elif len(message.channel.name.split("60c2db8cd821c401008981df")) > 1:
+            print(message.channel.name.split("60c2db8cd821c401008981df")[1])
         if message.author.id == 241702743834624000:            
             await message.add_reaction("🇭")
         if message.author.id == 523949187663134754:
@@ -181,6 +472,7 @@ class MyClient(discord.Client):
                     await message.channel.send("Enabled Global Bonk")
                 else:
                     await message.channel.send("Disabled Global Bonk")
+        
 
 intents = discord.Intents.default()
 intents.members = True
